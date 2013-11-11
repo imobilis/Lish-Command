@@ -1,0 +1,66 @@
+#!/bin/bash
+
+## --- 
+
+RSAFILE=~/.ssh/id_lish
+RSABITS=4096
+RSACREATED=false
+LISHUSER=$1
+DEFAULTSFILE=/etc/defaults/lish-command
+
+## ---
+
+function output {
+	echo -n -e "$1"
+}
+
+function outputline {
+	echo -e "$1"
+}
+
+function fatal {
+	outputline "\033[00;31;mFATAL: $1\033[00m"
+	outputline
+	exit 1;
+}
+
+function banner {
+	outputline "*** LISH Command Utility - Setup"
+	outputline "*** Copyright 2013 - Juan Traverso <juan@traverso.es>"
+	outputline 
+}
+
+function randompassphrase {
+	randompassphrase = `cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 32 | head -n 1`
+}
+
+function installdefaults {
+	sudo rm $DEFAULTSFILE
+	sudo touch $DEFAULTSFILE
+	sudo echo "LISHRSAFILE=$RSAFILE" >> $DEFAULTSFILE
+	sudo echo "LISHUSER=$LISHUSER" >> $DEFAULTSFILE 
+	sudo chmod +rw $DEFAULTSFILE
+}
+
+function setup {
+	randompassphrase
+	creatersakey
+	installscript
+	installdefaults
+	report
+}
+
+function installscript {
+	sudo cp ./lish-command-core /usr/bin/lish-command
+	sudo chmod +rx /usr/bin/lish-command
+}
+
+function creatersakey {
+	if [ ! -f $RSAFILE ]; then
+		ssh-keygen -f $RSAFILE -b $RSABITS -N $randompassphrase
+		RSACREATED=true;
+	fi
+}
+banner
+fatal "test"
+
