@@ -1,14 +1,35 @@
 #!/bin/bash
 
+# This file is part of LISH Command Utility.
+# Bash utility for Linode's LISH remote management service.
+# Copyright (C) 2013 Juan Traverso Viagas
+
+# LISH Command Utility is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+
+# LISH Command Utility is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with LISH Command Utility. If not, see <http://www.gnu.org/licenses/>.
+
 ## --- 
 
-RSAFILE=~/.ssh/id_lish
+RSAFILE=~/.ssh/id_lish_test
 RSABITS=4096
-RSACREATED=false
-LISHUSER=$1
-DEFAULTSFILE=/etc/defaults/lish-command
 
-## ---
+DEFAULTSFILE=~/.lish-command-rc
+DESTINATION=/usr/bin/lish-command
+SYSTEM=unknown
+LISHUSER=$1
+
+SCRIPTINSTALLED=false
+RSACREATED=false
+CONFIGCREATED=false
 
 function output {
 	echo -n -e "$1"
@@ -18,49 +39,159 @@ function outputline {
 	echo -e "$1"
 }
 
-function fatal {
-	outputline "\033[00;31;mFATAL: $1\033[00m"
+function usage {
+	outputline "Usage:"
+	outputline "\t$0 <linode-username>"
+}
+
+function critical {
+	outputline "CRITICAL: $1 "
 	outputline
 	exit 1;
 }
 
+function testuser {
+	if [ $1 -ne 1 ]; then
+		usage
+		exit 65
+	fi
+}
+
+function testsudo {
+	outputline ""
+	outputline "Some stages of this install script needs root privileges by using sudo utility,"
+	outputline "in order to install necessary script and configuration files."
+	outputline ""
+	outputline "Please, provide these privileges when asked."
+	DUMMY=`sudo -k`
+	SYSTEM=`sudo uname`
+	if [ $? -ne 0 ] ; then
+	    critical "Cannot run without root privileges."
+	fi
+	output "\rTesting sudo privileges..."
+	outputline " Success!"
+}
+
 function banner {
 	outputline "*** LISH Command Utility - Setup"
-	outputline "*** Copyright 2013 - Juan Traverso <juan@traverso.es>"
-	outputline 
+	outputline "*** Copyright 2013 - Juan Traverso Viagas"
+	outputline "*** Under GNU GENERAL PUBLIC LICENSE (GPL) version 3"
+	outputline ""
+	outputline "This script will install Lish-Command in your system."
+	outputline "The installation process will keep your current RSA key and"
+	outputline "configuration file from previous installations of Lish-Command,"
+	outputline "and will upgrade main script file if found."
+	outputline ""
+	outputline "If you want to create a new RSA file and/or configuration for your"
+	outputline "user account, you'll have to remove the files manually."
+	outputline ""
 }
 
 function randompassphrase {
-	randompassphrase = `cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 32 | head -n 1`
+	randompassphrase=`cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 32 | head -n 1`
 }
 
 function installdefaults {
-	sudo rm $DEFAULTSFILE
-	sudo touch $DEFAULTSFILE
-	sudo echo "LISHRSAFILE=$RSAFILE" >> $DEFAULTSFILE
-	sudo echo "LISHUSER=$LISHUSER" >> $DEFAULTSFILE 
-	sudo chmod +rw $DEFAULTSFILE
-}
-
-function setup {
-	randompassphrase
-	creatersakey
-	installscript
-	installdefaults
-	report
-}
-
-function installscript {
-	sudo cp ./lish-command-core /usr/bin/lish-command
-	sudo chmod +rx /usr/bin/lish-command
+	if [ ! -f $DEFAULTSFILE ]; then
+		touch $DEFAULTSFILE
+		echo "LISHRSAFILE=$RSAFILE" >> $DEFAULTSFILE
+		echo "LISHUSER=$LISHUSER" >> $DEFAULTSFILE 
+		chmod o+rx $DEFAULTSFILE
+		CONFIGCREATED=true
+	fi
 }
 
 function creatersakey {
 	if [ ! -f $RSAFILE ]; then
-		ssh-keygen -f $RSAFILE -b $RSABITS -N $randompassphrase
-		RSACREATED=true;
+		ssh-keygen -q -f $RSAFILE -b $RSABITS -N $randompassphrase
+		RSACREATED=true
 	fi
 }
+
+function installscript {
+	if [ -f $DESTINATION ]; then
+		VERSION=`tail -n1 $DESTINATION`
+	fi
+	NEWVERSION=`git log -n 1 --pretty=format:'%h' -- ./lish-command-core`
+	if [ "$VERSION" != "##$NEWVERSION" ]; then
+		sudo cp ./lish-command-core $DESTINATION
+		sudo chmod o+rwx $DESTINATION
+		echo "##DO NOT EDIT -- version information" >> $DESTINATION
+		echo "##$NEWVERSION" >> $DESTINATION
+		sudo chmod o+rx $DESTINATION
+		SCRIPTINSTALLED=true
+	fi
+}
+
+function report {
+	outputline "Install report:"
+	outputline "** RSA key creation"
+	if [ "$RSACREATED" == true ]; then 
+		outputline "\tRSA file $RSAFILE created."
+		outputline "\tPassphrase: '$randompassphrase'"
+		outputline "\tIMPORTANT: DO NOT FORGET THAT PASSPHRASE. You'll need it to send commands to LISH"
+		outputline "\tYou can change the RSA Key Passphrase by running 'ssh-keygen -f $RSAFILE -p'"
+		outputline ""
+		outputline "\tDon't forget to login to your Linode Account, go to your Profile, and add your new"
+		outputline "\tRSA Public Key so you can login to LISH using this utility."
+		outputline "\tYour RSA Public Key is:"
+		outputline ""
+		cat $RSAFILE.pub
+		outputline ""
+	else
+		outputline "\tRSA file $RSAFILE already exists. Nothing done."
+	fi
+
+	outputline "** Script install"
+	if [ "$SCRIPTINSTALLED" == true ]; then 
+		outputline "\tScript successfully installed to $DESTINATION."
+		outputline "\tRun 'lish-command' to see usage."
+	else
+		outputline "\tScript already exists. Nothing done."
+	fi
+
+	outputline "** Configuration install"
+	if [ "$CONFIGCREATED" == true ]; then 
+		outputline "\tConfiguration successfully created on $DEFAULTSFILE."
+	else
+		outputline "\tConfiguration already exists. Nothing done."
+	fi
+	outputline ""
+}
+
+function setup {
+	outputline ""
+	output "Creating RSA Key file..."
+	randompassphrase
+	creatersakey
+	if [ "$RSACREATED" == true ]; then 
+		outputline "[ OK ]"
+	else
+		outputline "[ SKIPPED ]"
+	fi
+
+	output "Installing script..."
+	installscript
+	if [ "$SCRIPTINSTALLED" == true ]; then 
+		outputline "[ OK ]"
+	else
+		outputline "[ SKIPPED ]"
+	fi
+
+	output "Writing user configuration..."
+	installdefaults
+	if [ "$CONFIGCREATED" == true ]; then 
+		outputline "[ OK ]"
+	else
+		outputline "[ SKIPPED ]"
+	fi
+	outputline ""
+	report
+}
+
 banner
-fatal "test"
+testuser $#
+testsudo
+setup
+
 
