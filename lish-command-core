@@ -1,3 +1,51 @@
 #!/bin/bash
-source /etc/default/lish-command
+
+# This file is part of LISH Command Utility.
+# Bash utility for Linode's LISH remote management service.
+# Copyright (C) 2013 Juan Traverso Viagas
+
+# LISH Command Utility is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+
+# LISH Command Utility is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with LISH Command Utility. If not, see <http://www.gnu.org/licenses/>.
+
+DEFAULTSFILE=~/.lish-command-rc
+
+function output {
+	echo -n -e "$1"
+}
+
+function outputline {
+	echo -e "$1"
+}
+
+function usage {
+	outputline "Usage:"
+	outputline "\t$0 <machine> <command>"
+}
+
+function critical {
+	outputline "CRITICAL: $1 "
+	outputline
+	exit 1;
+}
+
+if [ ! -f $DEFAULTSFILE ]; then
+	critical "Missing configuration. Aborted."
+fi
+
+if [ $# -ne 2 ]; then
+	usage
+fi
+
+source $DEFAULTSFILE
 ssh -i $LISHRSAFILE -t $LISHUSER@lish-london.linode.com $1 $2
+
