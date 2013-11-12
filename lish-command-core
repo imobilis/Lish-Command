@@ -38,6 +38,15 @@ function critical {
 	exit 1;
 }
 
+function banner {
+	outputline "*** LISH Command Utility - Setup"
+	outputline "*** Copyright 2013 - Juan Traverso Viagas"
+	outputline "*** Under GNU GENERAL PUBLIC LICENSE (GPL) version 3"
+	outputline ""
+}
+
+banner
+
 if [ ! -f $DEFAULTSFILE ]; then
 	critical "Missing configuration. Aborted."
 fi
