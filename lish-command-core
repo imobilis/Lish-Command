@@ -40,7 +40,7 @@ function critical {
 }
 
 function banner {
-	outputline "*** LISH Command Utility - Setup"
+	outputline "*** LISH Command Utility"
 	outputline "*** Copyright 2013 - Juan Traverso Viagas"
 	outputline "*** Under GNU GENERAL PUBLIC LICENSE (GPL) version 3"
 	outputline ""
