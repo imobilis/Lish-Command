@@ -44,6 +44,7 @@ fi
 
 if [ $# -ne 2 ]; then
 	usage
+	exit 1;
 fi
 
 source $DEFAULTSFILE
