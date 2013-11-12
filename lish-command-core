@@ -28,6 +28,7 @@ function outputline {
 }
 
 function usage {
+	banner
 	outputline "Usage:"
 	outputline "\t$0 <machine> <command>"
 }
@@ -44,8 +45,6 @@ function banner {
 	outputline "*** Under GNU GENERAL PUBLIC LICENSE (GPL) version 3"
 	outputline ""
 }
-
-banner
 
 if [ ! -f $DEFAULTSFILE ]; then
 	critical "Missing configuration. Aborted."
