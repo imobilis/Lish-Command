@@ -19,7 +19,7 @@
 
 ## --- 
 
-RSAFILE=~/.ssh/id_lish_test
+RSAFILE=~/.ssh/id_lish
 RSABITS=4096
 
 DEFAULTSFILE=~/.lish-command-rc
